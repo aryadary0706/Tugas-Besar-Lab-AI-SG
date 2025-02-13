@@ -67,7 +67,7 @@ elif page == "Klasifikasi":
     if classification_type == "Pilih Jenis Klasifikasi":
         st.write("Silakan pilih jenis klasifikasi terlebih dahulu.")
     elif classification_type == "Satuan":
-        uploaded_file = st.file_uploader("Upload Gambar", type=["jpg", "png", "jpeg"])
+        uploaded_file = st.file_uploader("Upload Gambar", type=["JPG", "png", "jpeg"])
         if uploaded_file is not None:
             image = Image.open(uploaded_file).convert("RGB")
             st.image(image, caption="Gambar yang Diunggah", width=300)
@@ -94,7 +94,7 @@ elif page == "Klasifikasi":
                 st.error("Kepercayaan model kurang dari 60%. Silakan unggah ulang gambar!")
 
     else:
-        uploaded_files = st.file_uploader("Upload Gambar (Batch)", type=["jpg", "png", "jpeg"], accept_multiple_files=True)
+        uploaded_files = st.file_uploader("Upload Gambar (Batch)", type=["JPG", "png", "jpeg"], accept_multiple_files=True)
         
         if uploaded_files:
             results = []
@@ -123,7 +123,7 @@ elif page == "Informasi Penyakit":
     st.write("Berikut adalah penjelasan dari tiap hasil klasifikasi yang mungkin dari aplikasi ini:")
     
     for key, value in disease_info.items():
-        image_path = f"{dir_images}/{key}.jpg"
+        image_path = f"{dir_images}/{key}.JPG"
 
         if not os.path.exists(image_path):
             image_path = "https://via.placeholder.com/150"
@@ -164,4 +164,4 @@ elif page == "About":
         st.markdown(f"- {name}")
 
     st.markdown("---")
-    st.write("🔗 [GitHub](https://github.com/mrda)")
+    st.write("🔗 [GitHub](https://github.com/Liamours/Tugas-Besar-Lab-AI-SG)")
