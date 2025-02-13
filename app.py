@@ -54,10 +54,10 @@ if page == "Welcome":
     st.header("👋 Selamat Datang di Aplikasi Pendeteksi Penyakit Tanaman Tomat!")
     st.write("Aplikasi yang bertujuan untuk melakukan klasifikasi jenis penyakit yang ada pada suatu tanaman tomat berdasarkan gambar daunnya.")
     st.write("Contoh:")
-    st.image(r"display_images\display_perbandingan.png", width=3000)
+    st.image(r"display_images/display_perbandingan.png", width=3000)
     st.header("Model yang digunakan!")
     st.write("Aplikasi ini menggunakan model CNN sederhana dengan arsitektur:")
-    st.image(r"display_images\cnn_model.png")
+    st.image(r"display_images/cnn_model.png")
     st.write("Silakan pilih menu di samping untuk melakukan klasifikasi, melihat informasi penyakit yang dapat dideteksi, dan informasi tentang aplikasi ini.")
     
 elif page == "Klasifikasi":
