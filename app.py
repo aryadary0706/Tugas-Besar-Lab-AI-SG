@@ -123,7 +123,7 @@ elif page == "Informasi Penyakit":
     st.write("Berikut adalah penjelasan dari tiap hasil klasifikasi yang mungkin dari aplikasi ini:")
     
     for key, value in disease_info.items():
-        image_path = os.path.join(dir_images, f"{key}.jpg")
+        image_path = f"{dir_images}/{key}.jpg"
 
         if not os.path.exists(image_path):
             image_path = "https://via.placeholder.com/150"
