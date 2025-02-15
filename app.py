@@ -5,7 +5,10 @@ import torchvision.transforms as transforms
 from PIL import Image
 import json
 import os
+import pandas as pd
+from streamlit_cropper import st_cropper
 
+# Definisi model CNN sederhana
 class SimpleCNN(nn.Module):
     def __init__(self, num_classes=10):
         super(SimpleCNN, self).__init__()
@@ -27,8 +30,11 @@ class SimpleCNN(nn.Module):
         x = self.fc2(x)
         return x
 
+# Load informasi penyakit dari file JSON
 with open("tomato_diseases_description.json", "r") as f:
     disease_info = json.load(f)
+
+# Load model yang sudah dilatih
 dir_model = r"cnn-tomato_disease-20250205.pth"
 dir_images = r"informasi_penyakit_image"
 model = SimpleCNN(num_classes=10)
@@ -36,6 +42,7 @@ checkpoint = torch.load(dir_model, map_location=torch.device("cpu"))
 model.load_state_dict(checkpoint["model_state_dict"])
 model.eval()
 
+# Preprocessing transformasi gambar
 image_size = (224, 224)
 test_transform = transforms.Compose([
     transforms.Resize(image_size),
@@ -46,6 +53,7 @@ test_transform = transforms.Compose([
 class_names = ['bacterial_spot', 'early_blight', 'late_blight', 'leaf_mold', 'septoria_leaf_spot', 
                'spider_mites', 'target_spot', 'yellow_leaf_curl_virus', 'mosaic_virus', 'healthy']
 
+# Sidebar Navigation
 st.sidebar.title("Dashboard")
 page = st.sidebar.radio("Pilih Menu", ["Welcome", "Klasifikasi", "Informasi Penyakit", "About"])
 
@@ -54,7 +62,7 @@ if page == "Welcome":
     st.header("👋 Selamat Datang di Aplikasi Pendeteksi Penyakit Tanaman Tomat!")
     st.write("Aplikasi yang bertujuan untuk melakukan klasifikasi jenis penyakit yang ada pada suatu tanaman tomat berdasarkan gambar daunnya.")
     st.write("Contoh:")
-    st.image(r"display_images/display_perbandingan.png", width=3000)
+    st.image(r"display_images/display_perbandingan.png", width=300)
     st.header("Model yang digunakan!")
     st.write("Aplikasi ini menggunakan model CNN sederhana dengan arsitektur:")
     st.image(r"display_images/cnn_model.png")
@@ -66,52 +74,74 @@ elif page == "Klasifikasi":
 
     if classification_type == "Pilih Jenis Klasifikasi":
         st.write("Silakan pilih jenis klasifikasi terlebih dahulu.")
+
     elif classification_type == "Satuan":
-        uploaded_file = st.file_uploader("Upload Gambar", type=["JPG", "png", "jpeg"])
-        if uploaded_file is not None:
-            image = Image.open(uploaded_file).convert("RGB")
-            st.image(image, caption="Gambar yang Diunggah", width=300)
-            
-            if image.size != (224, 224):
-                image = test_transform(image).unsqueeze(0)
-            
+        # Menambahkan opsi sumber gambar: Upload atau Kamera
+        sumber = st.radio("Pilih Sumber Gambar", ("Upload Gambar", "Ambil Foto"))
+        
+        if sumber == "Upload Gambar":
+            uploaded_file = st.file_uploader("Upload Gambar", type=["JPG", "png", "jpeg"])
+            if uploaded_file is not None:
+                image = Image.open(uploaded_file).convert("RGB")
+                st.image(image, caption="Gambar yang Diunggah", width=300)
+        else:
+            foto = st.camera_input("Ambil Foto")
+            if foto is not None:
+                image = Image.open(foto).convert("RGB")
+                st.image(image, caption="Gambar yang Diambil", width=300)
+                st.write("Crop the image to a 1:1 ratio:")
+                cropped_image = st_cropper(image, aspect_ratio=(1, 1), box_color="red")
+                st.image(cropped_image, caption="Gambar yang Dipotong (1:1)", width=300)
+                image = cropped_image
+                
+        # Proses klasifikasi jika gambar tersedia
+        if ('image' in locals()) and (image is not None):
+            # Terapkan transformasi jika ukuran gambar belum sesuai
+            # Pastikan transform hanya diterapkan pada PIL Image
+            if image.size != image_size:
+                image_tensor = test_transform(image).unsqueeze(0)
+            else:
+                image_tensor = test_transform(image).unsqueeze(0)
+
             with torch.no_grad():
-                output = model(image)
+                output = model(image_tensor)
                 _, predicted_idx = torch.max(output, 1)
                 predicted_label = class_names[predicted_idx.item()]
                 confidence = torch.nn.functional.softmax(output, dim=1)[0][predicted_idx.item()].item()
-            
+
             st.write(f"**Hasil Diagnosa:** {predicted_label.replace('_', ' ').title()}")
             st.write(f"**Probabilitas Prediksi:** {confidence * 100:.2f}%")
             
-            info = disease_info.get(predicted_label, {"nama_lain": "Tidak ada informasi","deskripsi": "Informasi tidak tersedia", "treatment": "Tidak ada rekomendasi"})
+            info = disease_info.get(predicted_label, {"nama_lain": "Tidak ada informasi",
+                                                        "deskripsi": "Informasi tidak tersedia",
+                                                        "penanganan": "Tidak ada rekomendasi"})
             st.subheader("Informasi Penyakit:")
-            st.write(f"📌 **Nama Lain:** {info['nama_lain']}")
-            st.write(f"📌 **Deskripsi:** {info['deskripsi']}")
-            st.write(f"💊 **Pengobatan:** {info['penanganan']}")
-
+            st.write(f"📌 **Nama Lain:** {info.get('nama_lain', 'Tidak ada informasi')}")
+            st.write(f"📌 **Deskripsi:** {info.get('deskripsi', 'Informasi tidak tersedia')}")
+            st.write(f"💊 **Pengobatan:** {info.get('penanganan', 'Tidak ada rekomendasi')}")
+            
             if confidence < 0.6:
                 st.error("Kepercayaan model kurang dari 60%. Silakan unggah ulang gambar!")
 
     else:
         uploaded_files = st.file_uploader("Upload Gambar (Batch)", type=["JPG", "png", "jpeg"], accept_multiple_files=True)
-        
         if uploaded_files:
             results = []
             for uploaded_file in uploaded_files:
                 image = Image.open(uploaded_file).convert("RGB")
-                if image.size != (224, 224):
-                    image = test_transform(image).unsqueeze(0)
+                if image.size != image_size:
+                    image_tensor = test_transform(image).unsqueeze(0)
+                else:
+                    image_tensor = test_transform(image).unsqueeze(0)
                 
                 with torch.no_grad():
-                    output = model(image)
+                    output = model(image_tensor)
                     _, predicted_idx = torch.max(output, 1)
                     predicted_label = class_names[predicted_idx.item()]
                     confidence = torch.nn.functional.softmax(output, dim=1)[0][predicted_idx.item()].item()
                 
                 results.append([uploaded_file.name, predicted_label, confidence])
             
-            import pandas as pd
             df = pd.DataFrame(results, columns=["Nama File", "Label", "Confidence"])
             st.dataframe(df)
 
